@@ -1,100 +1,84 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Photon.Pun;  // Photon PUN for networking
-using UnityEngine.UI;
-using TMPro;  // TextMeshPro for UI text elements
-using UnityEngine.SceneManagement;
+using Photon.Pun;
+using Photon.Realtime;
+using TMPro;
 
 public class CreateAndJoinRoom : MonoBehaviourPunCallbacks
 {
-    #region Public Variables
+    public GameObject directJoinPanel; // Panel for direct room join/create
+    public GameObject roomListPanel;   // Panel for room list
+    public TextMeshProUGUI CreateId;   // Input field for creating a room
+    public TextMeshProUGUI JoinId;     // Input field for joining a room
+    public Transform RoomListParent;  // Parent for the room list items
+    public GameObject RoomListItemPrefab; // Prefab for individual room items
 
-    // UI elements for entering room names
-    public TextMeshProUGUI CreateId;  // Input field for creating a room
-    public TextMeshProUGUI JoinId;    // Input field for joining a room
-
-    #endregion
-
-    #region Private Variables
-
-    // (Currently unused) 
-
-    #endregion
-
-    #region Events Variables
-
-    // (Currently unused) 
-
-    #endregion
-
-    #region Unity Methods
-
-    // Start is called before the first frame update
     void Start()
     {
-        // Initialization code can be added here if needed
+        ShowDirectJoinPanel(); // Default to direct join panel
     }
 
-    // Update is called once per frame
-    void Update()
+    public void ShowDirectJoinPanel()
     {
-        // Code to run every frame can be added here
+        directJoinPanel.SetActive(true);
+        roomListPanel.SetActive(false);
     }
 
-    #endregion
-
-    #region Public Methods
-
-    // Called when a room is successfully created
-    public override void OnCreatedRoom()
+    public void ShowRoomListPanel()
     {
-        Debug.Log("Room Created");
+        directJoinPanel.SetActive(false);
+        roomListPanel.SetActive(true);
+        PhotonNetwork.JoinLobby(); // Ensure the player joins the lobby to see rooms
     }
 
-    // Called when the player successfully joins a room
-    public override void OnJoinedRoom()
-    {
-        Debug.Log("Room Joined");
-        PhotonNetwork.LoadLevel("Play");  // Load the game scene named "Play" after joining a room
-    }
-
-    // Called when room creation fails
-    public override void OnCreateRoomFailed(short returnCode, string message)
-    {
-        base.OnCreateRoomFailed(returnCode, message);  // Log failure and provide a reason
-    }
-
-    // Called when joining a room fails
-    public override void OnJoinRoomFailed(short returnCode, string message)
-    {
-        base.OnJoinRoomFailed(returnCode, message);  // Log failure and provide a reason
-    }
-
-    #endregion
-
-    #region Private Methods
-
-    // (Currently unused)
-
-    #endregion
-
-    #region Button Methods
-
-    // Method called when the "Create Room" button is pressed
     public void CreateRoom()
     {
-        PhotonNetwork.CreateRoom(CreateId.text);  // Create a room with the name entered in the CreateId field
-        Debug.Log($"{CreateId.text} Room successfully created");
+        if (!string.IsNullOrEmpty(CreateId.text))
+        {
+            PhotonNetwork.CreateRoom(CreateId.text, new RoomOptions { MaxPlayers = 4 });
+        }
+        else
+        {
+            Debug.LogError("Room name cannot be empty!");
+        }
     }
 
-    // Method called when the "Join Room" button is pressed
     public void JoinRoom()
     {
-        PhotonNetwork.JoinRoom(JoinId.text);  // Join a room with the name entered in the JoinId field
-        Debug.Log($"{JoinId.text} Room successfully created");
+        if (!string.IsNullOrEmpty(JoinId.text))
+        {
+            PhotonNetwork.JoinRoom(JoinId.text);
+        }
+        else
+        {
+            Debug.LogError("Room name cannot be empty!");
+        }
     }
 
-    #endregion
+    public override void OnRoomListUpdate(List<RoomInfo> roomList)
+    {
+        foreach (Transform child in RoomListParent)
+        {
+            Destroy(child.gameObject); // Clear the existing list
+        }
 
+        foreach (RoomInfo room in roomList)
+        {
+            if (room.RemovedFromList) continue;
+
+            GameObject roomItem = Instantiate(RoomListItemPrefab, RoomListParent);
+            roomItem.GetComponentInChildren<TextMeshProUGUI>().text = room.Name;
+
+            roomItem.GetComponentInChildren<UnityEngine.UI.Button>().onClick.AddListener(() =>
+            {
+                PhotonNetwork.JoinRoom(room.Name);
+            });
+        }
+    }
+
+    public override void OnJoinedRoom()
+    {
+        Debug.Log("Joined Room");
+        PhotonNetwork.LoadLevel("Play"); // Load the game scene after joining a room
+    }
 }
