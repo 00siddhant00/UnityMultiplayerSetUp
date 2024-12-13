@@ -49,6 +49,16 @@ public class PlayerMovement : MonoBehaviour
             if (coinView != null)
             {
                 coinView.RPC("PlaySFX", RpcTarget.All);
+
+                // Mark the coin as collected (only Master Client modifies room properties)
+                if (PhotonNetwork.IsMasterClient)
+                {
+                    Coin coinScript = collision.GetComponent<Coin>();
+                    if (coinScript != null)
+                    {
+                        coinScript.MarkAsCollected();
+                    }
+                }
             }
         }
     }

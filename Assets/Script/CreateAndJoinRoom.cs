@@ -67,8 +67,16 @@ public class CreateAndJoinRoom : MonoBehaviourPunCallbacks
             if (room.RemovedFromList) continue;
 
             GameObject roomItem = Instantiate(RoomListItemPrefab, RoomListParent);
-            roomItem.GetComponentInChildren<TextMeshProUGUI>().text = room.Name;
 
+            // Assign room name
+            TextMeshProUGUI[] textFields = roomItem.GetComponentsInChildren<TextMeshProUGUI>();
+            if (textFields.Length >= 2)
+            {
+                textFields[0].text = room.Name; // First TextMeshPro for room name
+                textFields[1].text = $"Players: {room.PlayerCount}/{room.MaxPlayers}"; // Second TextMeshPro for player count
+            }
+
+            // Assign button functionality
             roomItem.GetComponentInChildren<UnityEngine.UI.Button>().onClick.AddListener(() =>
             {
                 PhotonNetwork.JoinRoom(room.Name);
