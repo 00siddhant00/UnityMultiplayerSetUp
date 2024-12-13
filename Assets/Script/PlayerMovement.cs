@@ -1,6 +1,7 @@
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+using ExitGames.Client.Photon; // For Hashtable
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -50,10 +51,17 @@ public class PlayerMovement : MonoBehaviour
             {
                 coinView.RPC("PlaySFX", RpcTarget.All);
 
-                // Mark the coin as collected (only Master Client modifies room properties)
-                if (PhotonNetwork.IsMasterClient)
+                Coin coinScript = collision.GetComponent<Coin>();
+
+                // Request the Master Client to mark the coin as collected
+                if (!PhotonNetwork.IsMasterClient)
                 {
-                    Coin coinScript = collision.GetComponent<Coin>();
+                    // Pass the PhotonView ID to the Master Client
+                    coinView.RPC("RequestMarkAsCollected", RpcTarget.MasterClient, coinView.ViewID);
+                }
+                else
+                {
+                    // If this client is the Master Client, mark directly
                     if (coinScript != null)
                     {
                         coinScript.MarkAsCollected();

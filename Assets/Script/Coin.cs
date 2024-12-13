@@ -11,15 +11,15 @@ public class Coin : MonoBehaviourPunCallbacks
 
     private void Start()
     {
+        coinID = GetComponent<PhotonView>().ViewID.ToString();
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.clip = collectSFX;
         audioSource.playOnAwake = false;
         spriteRenderer = GetComponent<SpriteRenderer>();
 
-        // Check if the coin has already been collected
         if (PhotonNetwork.CurrentRoom.CustomProperties.TryGetValue(coinID, out object isCollected) && (bool)isCollected)
         {
-            gameObject.SetActive(false); // Disable the coin
+            gameObject.SetActive(false);
         }
     }
 
@@ -31,11 +31,43 @@ public class Coin : MonoBehaviourPunCallbacks
         Destroy(gameObject, collectSFX.length);
     }
 
+    [PunRPC]
     public void MarkAsCollected()
     {
-        // Update room properties to mark the coin as collected
         Hashtable coinState = PhotonNetwork.CurrentRoom.CustomProperties;
-        coinState[coinID] = true; // Set coinID to collected
+        coinState[coinID] = true;
+        print(coinID);
         PhotonNetwork.CurrentRoom.SetCustomProperties(coinState);
+    }
+
+    [PunRPC]
+    public void RequestMarkAsCollected(int coinViewID)
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            // Find the coin by its PhotonView ID
+            PhotonView coinView = PhotonView.Find(coinViewID);
+            if (coinView != null)
+            {
+                Coin coinScript = coinView.GetComponent<Coin>();
+                if (coinScript != null)
+                {
+                    // Mark coin as collected and sync the state across the network
+                    coinScript.MarkAsCollected();
+                    // Set the coin as collected in the room's custom properties (or any other way of syncing)
+                    Hashtable coinState = PhotonNetwork.CurrentRoom.CustomProperties;
+                    coinState[coinScript.coinID] = true; // Mark this coin as collected
+                    PhotonNetwork.CurrentRoom.SetCustomProperties(coinState);
+                }
+                else
+                {
+                    Debug.LogError("Coin script not found on the coin object.");
+                }
+            }
+            else
+            {
+                Debug.LogError("PhotonView not found with ID: " + coinViewID);
+            }
+        }
     }
 }
